@@ -2,9 +2,8 @@ package body Sparkmemory with
    SPARK_Mode => On
 is
    function Align_Forward
-     (Addr : Address_Type; Align : Align_Type) return Address_Type
-     with
-     Pre => Align mod 2 = 0
+     (Addr : Address_Type; Align : Align_Type) return Address_Type with
+      Pre => Align mod 2 = 0
    is
       P : Address_Type := Addr;
       M : Address_Type := P mod Align;
@@ -16,8 +15,7 @@ is
       return P;
    end Align_Forward;
 
-   procedure Arena_Init
-     (A : out Arena; Store : System.Address; Size : Size_Type)
+   procedure Arena_Init (A : out Arena; Store : Address_Type; Size : Size_Type)
    is
    begin
       A.Buf         := Store;
@@ -26,19 +24,18 @@ is
    end Arena_Init;
 
    procedure Alloc_Align
-     (A     : in out Arena; P : out System.Address; Size : Size_Type;
+     (A     : in out Arena; P : out Address_Type; Size : Size_Type;
       Align :        Align_Type := Default_Alignment)
    is
-      UIntAddr : Address_Type := Address_Type (To_Integer (A.Buf));
-      Curr_Ptr : Address_Type := UIntAddr + A.Curr_Offset;
-      Offset   : Offset_Type  := Align_Forward (Curr_Ptr, Align) - UIntAddr;
+      UInt_Addr : Address_Type := A.Buf;
+      Curr_Ptr  : Address_Type := UInt_Addr + A.Curr_Offset;
+      Offset    : Offset_Type  := Align_Forward (Curr_Ptr, Align) - UInt_Addr;
    begin
-      P := System.Null_Address;
+      P := To_Integer (System.Null_Address);
 
       if Offset + Size <= A.Buf_Length then
-         P             := To_Address (Integer_Address (UIntAddr + Offset));
+         P             := UInt_Addr + Offset;
          A.Curr_Offset := Offset + Size;
       end if;
-
    end Alloc_Align;
 end Sparkmemory;
