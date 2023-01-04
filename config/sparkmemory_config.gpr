@@ -15,6 +15,7 @@ abstract project Sparkmemory_Config is
            ,"-gnatn" -- Enable inlining
            ,"-ffunction-sections" -- Separate ELF section for each function
            ,"-fdata-sections" -- Separate ELF section for each variable
+           ,"-gnatp" -- Suppress run-time checks
           );
 
    type Build_Profile_Kind is ("release", "validation", "development");

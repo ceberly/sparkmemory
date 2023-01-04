@@ -7,3 +7,6 @@ maintainers = ["Chris Eberly <ceberly@users.noreply.github.com>"]
 maintainers-logins = ["ceberly"]
 [[depends-on]]
 gnatprove = "^12.1.1"
+
+[build-switches]
+release.runtime_checks = "none"

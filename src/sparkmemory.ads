@@ -8,23 +8,29 @@ package Sparkmemory with
 is
    type Arena is private;
 
-   subtype Address_Type is Integer_Address;
-   -- type Address_Type is mod System.Memory_Size;
+   subtype Address_Type is System.Address;
 
-   subtype Size_Type is Interfaces.C.size_t;
-   subtype Offset_Type is Integer_Address;
-   subtype Align_Type is Integer_Address range 1 .. Integer_Address'Last;
+   subtype Count_Type is Storage_Count;
+
+   subtype Size_Type is Count_Type range 1 .. Count_Type'Last;
+   subtype Offset_Type is Storage_Offset range 0 .. Count_Type'Last;
+
+   -- 1KB alignment max? /shrug
+   subtype Align_Type is Offset_Type range 1 .. 2**10;
 
    -- XXX: gnatprove issues a warning about the initial value of A not being
    -- used. Which is true, but I need to create it in C and I can't get
    -- just out (vs in out) params to work right with Ada <-> C.
    procedure Arena_Init
-     (A : in out Arena; Store : Address_Type; Size : Size_Type);
+     (A : in out Arena; Store : Address_Type; Size : Size_Type) with
+      Global => null,
+      Pre    => Store /= System.Null_Address;
 
    procedure Alloc_Align
      (A     : in out Arena; P : out Address_Type; Size : Size_Type;
       Align :        Align_Type) with
-      Pre => Align mod 2 = 0 and then Size > 0;
+      Global => null,
+      Pre    => Align mod 2 = 0 and then Size > 0;
 
    procedure Arena_Free_All (A : in out Arena);
 
@@ -56,8 +62,8 @@ is
 
 private
    type Arena is record
-      Buf         : Address_Type := To_Integer (System.Null_Address);
-      Buf_Length  : Size_Type    := 0;
+      Buf         : Address_Type := System.Null_Address;
+      Buf_Length  : Count_Type   := 0;
       Curr_Offset : Offset_Type  := 0;
    end record with
       Convention => C;
