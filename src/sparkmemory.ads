@@ -26,6 +26,8 @@ is
       Align :        Align_Type) with
       Pre => Align mod 2 = 0 and then Size > 0;
 
+   procedure Arena_Free_All (A : in out Arena);
+
    package C with
       -- respect the C idiom of returning a pointer and modifying a state,
       -- for better or worse :)
@@ -38,6 +40,11 @@ is
          Export        => True,
          Convention    => C,
          External_Name => "arena_init";
+
+      procedure Arena_Free_All (A : in out Arena) with
+         Export        => True,
+         Convention    => C,
+         External_Name => "arena_free_all";
 
       function Arena_Alloc
         (A     : in out Arena; Size : Interfaces.C.size_t;

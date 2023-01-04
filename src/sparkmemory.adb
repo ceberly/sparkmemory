@@ -10,6 +10,11 @@ is
       A.Curr_Offset := 0;
    end Arena_Init;
 
+   procedure Arena_Free_All (A : in out Arena) is
+   begin
+      A.Curr_Offset := 0;
+   end Arena_Free_All;
+
    procedure Alloc_Align
      (A     : in out Arena; P : out Address_Type; Size : Size_Type;
       Align :        Align_Type) with
@@ -43,6 +48,11 @@ is
    package body C with
       SPARK_Mode => Off
    is
+      procedure Arena_Free_All (A : in out Arena) is
+      begin
+         Sparkmemory.Arena_Free_All (A);
+      end Arena_Free_All;
+
       procedure Arena_Init
         (A : in out Arena; Store : Address_Type; Size : Interfaces.C.size_t)
       is
