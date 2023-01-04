@@ -1,7 +1,8 @@
 package body Sparkmemory with
    SPARK_Mode => On
 is
-   procedure Arena_Init (A : out Arena; Store : Address_Type; Size : Size_Type)
+   procedure Arena_Init
+     (A : in out Arena; Store : Address_Type; Size : Size_Type)
    is
    begin
       A.Buf         := Store;
@@ -11,10 +12,13 @@ is
 
    procedure Alloc_Align
      (A     : in out Arena; P : out Address_Type; Size : Size_Type;
-      Align :        Align_Type)
+      Align :        Align_Type) with
+      Refined_Post =>
+      (P = To_Integer (System.Null_Address)
+       or else P > A'Old.Buf + A'Old.Curr_Offset)
    is
-      Curr_Ptr : Address_Type := A.Buf + A.Curr_Offset;
-      M        : Offset_Type  := Curr_Ptr mod Align;
+      Curr_Ptr : Address_Type         := A.Buf + A.Curr_Offset;
+      M        : constant Offset_Type := Curr_Ptr mod Align;
       Offset   : Offset_Type;
    begin
       P := To_Integer (System.Null_Address);
@@ -25,7 +29,7 @@ is
 
       Offset := Curr_Ptr - A.Buf;
 
-      if Offset < 0 or else Size_Type (Offset_Type'Last - Offset) <= Size then
+      if Size_Type (Offset_Type'Last - Offset) <= Size then
          return;
       end if;
 
@@ -33,27 +37,33 @@ is
          P             := A.Buf + Offset;
          A.Curr_Offset := Offset_Type (Size_Type (Offset) + Size);
       end if;
+
    end Alloc_Align;
 
-   procedure C_Arena_Init
-     (A : out Arena; Store : Address_Type; Size : Interfaces.C.size_t)
+   package body C with
+      SPARK_Mode => Off
    is
-   begin
-      Arena_Init (A, Store, Size);
-   end C_Arena_Init;
+      procedure Arena_Init
+        (A : in out Arena; Store : Address_Type; Size : Interfaces.C.size_t)
+      is
+      begin
 
-   procedure C_Arena_Alloc
-     (A : in out Arena; Addr : out System.Address; Size : Interfaces.C.size_t;
-      Align :        Interfaces.C.size_t)
-   is
-      Int_Addr : Integer_Address;
-   begin
-      Addr := System.Null_Address;
+         Sparkmemory.Arena_Init (A, Store, Size);
+      end Arena_Init;
 
-      if Align > 0 and then Align mod 2 = 0 then
-         Alloc_Align (A, Int_Addr, Size, Align_Type (Align));
+      function Arena_Alloc
+        (A     : in out Arena; Size : Interfaces.C.size_t;
+         Align :        Interfaces.C.size_t) return System.Address
+      is
+         Int_Addr : Integer_Address;
+      begin
+         if Align > 0 and then Align mod 2 = 0 and then Size > 0 then
+            Sparkmemory.Alloc_Align (A, Int_Addr, Size, Align_Type (Align));
 
-         Addr := To_Address (Int_Addr);
-      end if;
-   end C_Arena_Alloc;
+            return To_Address (Int_Addr);
+         end if;
+
+         return System.Null_Address;
+      end Arena_Alloc;
+   end C;
 end Sparkmemory;
