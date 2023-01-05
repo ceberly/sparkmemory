@@ -15,32 +15,62 @@ is
       A.Curr_Offset := 0;
    end Arena_Free_All;
 
+   -- Computes A mod B, quickly, if B is a power of 2.
+   function Fast_Mod
+     (A : Integer_Address; B : Integer_Address) return Integer_Address is
+     (A and (B - 1)) with
+      Inline => True,
+      Pre    => B >= 2 and then B mod 2 = 0,
+      Post   => Fast_Mod'Result >= 0 and then Fast_Mod'Result < B;
+      -- XXX and then Fast_Mod'Result == A mod B
+
    function Align_Forward
-     (Ptr : Address_Type; Align : Align_Type) return System.Address with
-      Pre  => Ptr mod 2 = 0,
+     (Ptr : Address_Type; Align : Align_Type) return Address_Type with
+      Pre => Ptr > 0 and then Align mod 2 = 0
+      and then Address_Type'Last - Ptr >= Align,
       Post => Align_Forward'Result >= Ptr
    is
-      P : constant Integer_Address := To_Integer (Ptr);
-      A : constant Integer_Address := Integer_Address (Align);
-      M : constant Integer_Address := P mod A;
+      M : constant Integer_Address := Fast_Mod (Ptr, Align);
    begin
       if M = 0 then
-         return To_Address (P);
+         return Ptr;
       else
-         return To_Address (P + A - M);
+         return Ptr + Align - M;
       end if;
    end Align_Forward;
 
+   function Is_Initialized (A : Arena) return Boolean is -- Ghost
+     (A.Buf > 0 and then A.Buf_Length > 0);
+
+   function Address_Is_Reasonable
+     (A : Arena; Align : Align_Type) return Boolean is
+     (Address_Type'Last - A.Buf >= A.Curr_Offset
+      and then Address_Type'Last - (A.Buf + A.Curr_Offset) >= Align) with
+      Inline => True;
+
    procedure Alloc_Align
      (A     : in out Arena; P : out Address_Type; Size : Size_Type;
-      Align :        Align_Type)
+      Align :        Align_Type) with
+      Refined_Post => P = 0 or else (P >= A.Buf + A'Old.Curr_Offset)
    is
-      Aligned_Ptr : constant System.Address :=
-        Align_Forward (A.Buf + A.Curr_Offset, Align);
-      Aligned_Offset : constant Offset_Type := Aligned_Ptr - A.Buf;
-      New_Offset     : constant Offset_Type := Aligned_Offset + Size;
+      Curr_Ptr       : Address_Type;
+      Aligned_Offset : Offset_Type;
+      New_Offset     : Offset_Type;
    begin
-      P := System.Null_Address;
+      P := 0;
+
+      if not Address_Is_Reasonable (A, Align) then
+         return;
+      end if;
+
+      Curr_Ptr       := A.Buf + A.Curr_Offset;
+      Aligned_Offset := Align_Forward (Curr_Ptr, Align) - A.Buf;
+
+      if Offset_Type'Last - Aligned_Offset < Size then
+         return;
+      end if;
+
+      New_Offset := Aligned_Offset + Size;
 
       if New_Offset <= A.Buf_Length then
          P             := A.Buf + Aligned_Offset;
@@ -75,7 +105,11 @@ is
             Sparkmemory.Alloc_Align
               (A, Addr, Size_Type (Size), Align_Type (Align));
 
-            return Addr;
+            if Addr = 0 then
+               return System.Null_Address;
+            end if;
+
+            return To_Address (Addr);
          end if;
 
          return System.Null_Address;

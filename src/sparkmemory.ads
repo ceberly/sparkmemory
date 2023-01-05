@@ -8,12 +8,10 @@ package Sparkmemory with
 is
    type Arena is private;
 
-   subtype Address_Type is System.Address;
+   subtype Address_Type is Integer_Address;
 
-   subtype Count_Type is Storage_Count;
-
-   subtype Size_Type is Count_Type range 1 .. Count_Type'Last;
-   subtype Offset_Type is Storage_Offset range 0 .. Count_Type'Last;
+   subtype Size_Type is Address_Type;
+   subtype Offset_Type is Address_Type;
 
    -- 1KB alignment max? /shrug
    subtype Align_Type is Offset_Type range 1 .. 2**10;
@@ -24,13 +22,16 @@ is
    procedure Arena_Init
      (A : in out Arena; Store : Address_Type; Size : Size_Type) with
       Global => null,
-      Pre    => Store /= System.Null_Address;
+      Pre    => Store /= 0;
+
+   function Is_Initialized (A : Arena) return Boolean with
+      Ghost;
 
    procedure Alloc_Align
      (A     : in out Arena; P : out Address_Type; Size : Size_Type;
       Align :        Align_Type) with
       Global => null,
-      Pre    => Align mod 2 = 0 and then Size > 0;
+      Pre    => Is_Initialized (A) and then Align mod 2 = 0 and then Size /= 0;
 
    procedure Arena_Free_All (A : in out Arena);
 
@@ -62,8 +63,8 @@ is
 
 private
    type Arena is record
-      Buf         : Address_Type := System.Null_Address;
-      Buf_Length  : Count_Type   := 0;
+      Buf         : Address_Type := 0;
+      Buf_Length  : Size_Type    := 0;
       Curr_Offset : Offset_Type  := 0;
    end record with
       Convention => C;
