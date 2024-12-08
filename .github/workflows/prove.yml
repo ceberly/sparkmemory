@@ -1,0 +1,18 @@
+name: Run GNATProve
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubunut-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set up alire
+        uses: alire-project/setup-alire@v3
+
+      - name: gnatprove
+        run: alr gnatprove
+        
