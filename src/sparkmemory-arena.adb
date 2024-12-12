@@ -73,7 +73,7 @@ package body Sparkmemory.Arena is
       is
          Addr : Address_Type;
       begin
-         if Align > 0 and then Align mod 2 = 0 and then Size > 0 then
+         if Align > 0 and then Size > 0 then
             Sparkmemory.Arena.Alloc_Align
               (A, Addr, Size_Type (Size), Align_Type (Align));
 
